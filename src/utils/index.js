@@ -112,9 +112,10 @@ export const createSnapList = (map, draw, currentFeature, getFeatures) => {
     addVerticesToVertices(feature.geometry.coordinates);
 
     // If feature is currently on viewport add to snap list
-    if (!booleanDisjoint(bboxAsPolygon, feature)) {
+   /*  if (!booleanDisjoint(bboxAsPolygon, feature)) {
       snapList.push(feature);
-    }
+    } */
+   snapList.push(feature);
   });
 
   return [snapList, vertices];
