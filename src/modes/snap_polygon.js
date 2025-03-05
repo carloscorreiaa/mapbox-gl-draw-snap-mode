@@ -1,17 +1,18 @@
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+const { geojsonTypes, modes, cursors } = MapboxDraw.constants;
+const { doubleClickZoom } = MapboxDraw.lib;
+const DrawPolygon = MapboxDraw.modes.draw_polygon;
+
 import {
-  addPointToVertices,
+  addPointTovertices,
   createSnapList,
   getGuideFeature,
   IDS,
   shouldHideGuide,
   snap,
-} from "./../utils/index.js";
-import booleanIntersects from "@turf/boolean-intersects";
+} from './../utils';
+import booleanIntersects from '@turf/boolean-intersects';
 
-const { doubleClickZoom } = MapboxDraw.lib;
-const { geojsonTypes, modes, cursors } = MapboxDraw.constants;
-const DrawPolygon = MapboxDraw.modes.draw_polygon;
 const SnapPolygonMode = { ...DrawPolygon };
 
 SnapPolygonMode.onSetup = function (options) {
@@ -37,12 +38,7 @@ SnapPolygonMode.onSetup = function (options) {
   this.clearSelectedFeatures();
   doubleClickZoom.disable(this);
 
-  const [snapList, vertices] = createSnapList(
-    this.map,
-    this._ctx.api,
-    polygon,
-    this._ctx.options.snapOptions?.snapGetFeatures
-  );
+  const [snapList, vertices] = createSnapList(this.map, this._ctx.api, polygon);
 
   const state = {
     map: this.map,
@@ -64,24 +60,23 @@ SnapPolygonMode.onSetup = function (options) {
     const [snapList, vertices] = createSnapList(
       this.map,
       this._ctx.api,
-      polygon,
-      this._ctx.options.snapOptions?.snapGetFeatures
+      polygon
     );
     state.vertices = vertices;
     state.snapList = snapList;
   };
   // for removing listener later on close
-  state["moveendCallback"] = moveendCallback;
+  state['moveendCallback'] = moveendCallback;
 
-  const optionsChangedCallback = (options) => {
+  const optionsChangedCallBAck = (options) => {
     state.options = options;
   };
 
   // for removing listener later on close
-  state["optionsChangedCallback"] = optionsChangedCallback;
+  state['optionsChangedCallBAck'] = optionsChangedCallBAck;
 
-  this.map.on("moveend", moveendCallback);
-  this.map.on("draw.snap.options_changed", optionsChangedCallback);
+  this.map.on('moveend', moveendCallback);
+  this.map.on('draw.snap.options_changed', optionsChangedCallBAck);
 
   return state;
 };
@@ -107,7 +102,7 @@ SnapPolygonMode.onClick = function (state) {
 
   // const point = state.map.project();
 
-  addPointToVertices(state.map, state.vertices, { lng, lat });
+  addPointTovertices(state.map, state.vertices, { lng, lat });
 
   state.polygon.updateCoordinate(`0.${state.currentVertexPosition}`, lng, lat);
 
@@ -116,7 +111,7 @@ SnapPolygonMode.onClick = function (state) {
   state.polygon.updateCoordinate(`0.${state.currentVertexPosition}`, lng, lat);
 };
 
-SnapPolygonMode.onMouseMove = function (state, e) {
+/* SnapPolygonMode.onMouseMove = function (state, e) {
   const { lng, lat } = snap(state, e);
 
   state.polygon.updateCoordinate(`0.${state.currentVertexPosition}`, lng, lat);
@@ -139,6 +134,23 @@ SnapPolygonMode.onMouseMove = function (state, e) {
   } else {
     this.updateUIClasses({ mouse: cursors.ADD });
   }
+}; */
+SnapPolygonMode.onMouseMove = function (state, e) {
+  const { lng, lat } = snap(state, e);
+
+  state.snappedLng = lng;
+  state.snappedLat = lat;
+  state.polygon.updateCoordinate(`0.${state.currentVertexPosition}`, lng, lat);
+
+  if (
+    state.lastVertex &&
+    state.lastVertex[0] === lng &&
+    state.lastVertex[1] === lat
+  ) {
+    this.updateUIClasses({ mouse: cursors.POINTER });
+  } else {
+    this.updateUIClasses({ mouse: cursors.ADD });
+  }
 };
 
 // This is 'extending' DrawPolygon.toDisplayFeatures
@@ -154,16 +166,16 @@ SnapPolygonMode.onStop = function (state) {
   this.deleteFeature(IDS.VERTICAL_GUIDE, { silent: true });
   this.deleteFeature(IDS.HORIZONTAL_GUIDE, { silent: true });
 
-  // remove moveend callback
-  this.map.off("moveend", state.moveendCallback);
-  this.map.off("draw.snap.options_changed", state.optionsChangedCallback);
+  // remove moveemd callback
+  this.map.off('moveend', state.moveendCallback);
+  this.map.off('draw.snap.options_changed', state.optionsChangedCallBAck);
 
   var userPolygon = state.polygon;
   if (state.options.overlap) {
     DrawPolygon.onStop.call(this, state);
     return;
   }
-  // if overlap is false, mutate polygon so it doesn't overlap with existing ones
+  // if overlap is false, mutate polygon so it doesnt overlap with existing ones
   // get all editable features to check for intersections
   var features = this._ctx.store.getAll();
 

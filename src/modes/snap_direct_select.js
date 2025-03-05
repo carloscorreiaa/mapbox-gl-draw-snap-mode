@@ -1,14 +1,8 @@
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import {
-  createSnapList,
-  getGuideFeature,
-  IDS,
-  snap,
-} from "./../utils/index.js";
-
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import { createSnapList, getGuideFeature, IDS, snap } from './../utils';
 const { doubleClickZoom } = MapboxDraw.lib;
-const Constants = MapboxDraw.constants;
 const DirectSelect = MapboxDraw.modes.direct_select;
+const Constants = MapboxDraw.constants;
 const SnapDirectSelect = { ...DirectSelect };
 
 SnapDirectSelect.onSetup = function (opts) {
@@ -16,19 +10,14 @@ SnapDirectSelect.onSetup = function (opts) {
   const feature = this.getFeature(featureId);
 
   if (!feature) {
-    throw new Error("You must provide a featureId to enter direct_select mode");
+    throw new Error('You must provide a featureId to enter direct_select mode');
   }
 
   if (feature.type === Constants.geojsonTypes.POINT) {
     throw new TypeError("direct_select mode doesn't handle point features");
   }
 
-  const [snapList, vertices] = createSnapList(
-    this.map,
-    this._ctx.api,
-    feature,
-    this._ctx.options.snapOptions?.snapGetFeatures
-  );
+  const [snapList, vertices] = createSnapList(this.map, this._ctx.api, feature);
 
   const verticalGuide = this.newFeature(getGuideFeature(IDS.VERTICAL_GUIDE));
   const horizontalGuide = this.newFeature(
@@ -64,29 +53,13 @@ SnapDirectSelect.onSetup = function (opts) {
     trash: true,
   });
 
-  const optionsChangedCallback = (options) => {
+  const optionsChangedCallBAck = (options) => {
     state.options = options;
   };
 
   // for removing listener later on close
-  state["optionsChangedCallback"] = optionsChangedCallback;
-  this.map.on("draw.snap.options_changed", optionsChangedCallback);
-
-  const moveendCallback = () => {
-    const [snapList, vertices] = createSnapList(
-      this.map,
-      this._ctx.api,
-      feature,
-      this._ctx.options.snapOptions?.snapGetFeatures
-    );
-    state.vertices = vertices;
-    state.snapList = snapList;
-  };
-
-  // for removing listener later on close
-  state["moveendCallback"] = moveendCallback;
-
-  this.map.on("moveend", moveendCallback);
+  state['optionsChangedCallBAck'] = optionsChangedCallBAck;
+  this.map.on('draw.snap.options_changed', optionsChangedCallBAck);
 
   return state;
 };
@@ -101,9 +74,9 @@ SnapDirectSelect.onStop = function (state) {
   this.deleteFeature(IDS.VERTICAL_GUIDE, { silent: true });
   this.deleteFeature(IDS.HORIZONTAL_GUIDE, { silent: true });
 
-  // remove moveend callback
-  this.map.off("moveend", state.moveendCallback);
-  this.map.off("draw.snap.options_changed", state.optionsChangedCallback);
+  // remove moveemd callback
+  //   this.map.off("moveend", state.moveendCallback);
+  this.map.off('draw.snap.options_changed', state.optionsChangedCallBAck);
 
   // This relies on the the state of SnapPolygonMode being similar to DrawPolygon
   DirectSelect.onStop.call(this, state);
