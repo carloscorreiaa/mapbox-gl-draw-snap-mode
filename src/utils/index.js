@@ -53,20 +53,6 @@ export const createSnapList = (map, draw, currentFeature, getFeatures) => {
   }
 
   const snapList = [];
-
-  // Get current bbox as polygon
-  const bboxAsPolygon = (() => {
-    const canvas = map.getCanvas(),
-      w = canvas.width,
-      h = canvas.height,
-      cUL = map.unproject([0, 0]).toArray(),
-      cUR = map.unproject([w, 0]).toArray(),
-      cLR = map.unproject([w, h]).toArray(),
-      cLL = map.unproject([0, h]).toArray();
-
-    return bboxPolygon([cLL, cUR].flat());
-  })();
-
   const vertices = [];
 
   // Keeps vertices for drawing guides
@@ -110,12 +96,9 @@ export const createSnapList = (map, draw, currentFeature, getFeatures) => {
       return;
 
     addVerticesToVertices(feature.geometry.coordinates);
-
-    // If feature is currently on viewport add to snap list
-   /*  if (!booleanDisjoint(bboxAsPolygon, feature)) {
-      snapList.push(feature);
-    } */
-   snapList.push(feature);
+    
+    // Add all features to snapList without viewport filtering
+    snapList.push(feature);
   });
 
   return [snapList, vertices];
