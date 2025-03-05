@@ -26,76 +26,39 @@ export const addPointToVertices = (map, vertices, coordinates) => {
   vertices.push(coordinates);
 };
 
+// Remove all viewport calculations and simplify createSnapList
 export const createSnapList = (map, draw, currentFeature) => {
-  // Get all drawn features
   const features = draw.getAll().features;
   const snapList = [];
-
-  // Get current bbox as polygon
-  const bboxAsPolygon = (() => {
-    const canvas = map.getCanvas(),
-      w = canvas.width,
-      h = canvas.height,
-      cUL = map.unproject([0, 0]).toArray(),
-      cUR = map.unproject([w, 0]).toArray(),
-      cLR = map.unproject([w, h]).toArray(),
-      cLL = map.unproject([0, h]).toArray();
-
-    return bboxPolygon([cLL, cUR].flat());
-  })();
-
   const vertices = [];
 
-  // Keeps vertices for drwing guides
-  const addVerticesTovertices = (coordinates, isCurrentFeature = false) => {
-    if (!Array.isArray(coordinates)) throw Error('Your array is not an array');
-
+  const addVerticesToList = (coordinates) => {
+    if (!Array.isArray(coordinates)) return;
+    
     if (Array.isArray(coordinates[0])) {
-      // coordinates is an array of arrays, we must go deeper
-      coordinates.forEach((coord) => {
-        addVerticesTovertices(coord);
-      });
-    } else {
-      // If not an array of arrays, only consider arrays with two items
-      if (coordinates.length === 2) {
-        addPointToVertices(map, vertices, coordinates);
-      }
+      coordinates.forEach(coord => addVerticesToList(coord));
+    } else if (coordinates.length === 2) {
+      vertices.push(coordinates);
     }
   };
 
   features.forEach((feature) => {
-    // For currentfeature
-    if (feature.id === currentFeature.id) {
-      if (currentFeature.type === geojsonTypes.POLYGON) {
-        // For the current polygon, the last two points are the mouse position and back home
-        // so we chop those off (else we get vertices showing where the user clicked, even
-        // if they were just panning the map)
-        addVerticesTovertices(
-          feature.geometry.coordinates[0].slice(0, -2),
-          true
-        );
-      }
+    // Skip guides and current feature
+    if (feature.id === IDS.HORIZONTAL_GUIDE || 
+        feature.id === IDS.VERTICAL_GUIDE ||
+        feature.id === currentFeature.id) {
       return;
     }
 
-    // If this is re-running because a user is moving the map, the features might include
-    // vertices or the last leg of a polygon
-    if (
-      feature.id === IDS.HORIZONTAL_GUIDE ||
-      feature.id === IDS.VERTICAL_GUIDE
-    )
-      return;
-
-    addVerticesTovertices(feature.geometry.coordinates);
-
-    // If feature is currently on viewport add to snap list
-    /* if (!booleanDisjoint(bboxAsPolygon, feature)) {
-      snapList.push(feature);
-    } */
-
+    // Add all vertices
+    addVerticesToList(feature.geometry.coordinates);
+    
+    // Add feature to snap list
     snapList.push(feature);
   });
-  console.log(snapList);
+
+  console.log('Snap list length:', snapList.length);
+  console.log('Vertices length:', vertices.length);
   
   return [snapList, vertices];
 };
@@ -125,6 +88,7 @@ const getNearbyvertices = (vertices, coords) => {
 };
 
 const calcLayerDistances = (lngLat, layer) => {
+  console.log('Calculating distances for layer:', layer.id);
   // the point P which we want to snap (probpably the marker that is dragged)
   const P = [lngLat.lng, lngLat.lat];
 
@@ -217,12 +181,15 @@ const calcLayerDistances = (lngLat, layer) => {
     segmentIndex = coordinates.length - 2;
   }
 
-  return {
+  const results = {
     latlng: { lng, lat },
-    segment: coordinates.slice(segmentIndex, segmentIndex + 2),
+    segment: coordinates?.slice(segmentIndex, segmentIndex + 2),
     distance: nearestPoint.properties.dist,
-    isMarker,
+    isMarker
   };
+  
+  console.log('Distance calculation results:', results);
+  return results;
 };
 
 function getFeatureWithNearestPoint(lineStrings, P) {
@@ -380,11 +347,13 @@ export const snap = (state, e) => {
   // snapping is on
   let closestLayer, minDistance, snapLatLng;
   if (state.options.snap) {
+    console.log('Attempting to snap at:', e.lngLat);
     closestLayer = calcClosestLayer({ lng, lat }, state.snapList);
+    console.log('Found closest layer:', closestLayer);
 
-    // if no layers found. Can happen when circle is the only visible layer on the map and the hidden snapping-border circle layer is also on the map
     if (Object.keys(closestLayer).length === 0) {
-      return { lng, lat }; // Return original coordinates instead of false
+      console.log('No closest layer found');
+      return { lng, lat };
     }
 
     const isMarker = closestLayer.isMarker;
@@ -403,9 +372,10 @@ export const snap = (state, e) => {
       snapLatLng = closestLayer.latlng;
     }
 
+    // Increase snap distance for better snapping at edges
     minDistance =
-      ((state.options.snapOptions && state.options.snapOptions.snapPx) || 30) * // Increased from 15 to 30
-      metersPerPixel(snapLatLng.lat, state.map.getZoom());
+      ((state.options.snapOptions && state.options.snapOptions.snapPx) || 50) *
+      metersPerPixel(lat, state.map.getZoom());
   }
 
   let verticalPx, horizontalPx;

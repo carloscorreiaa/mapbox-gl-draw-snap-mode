@@ -136,7 +136,9 @@ SnapPolygonMode.onClick = function (state) {
   }
 }; */
 SnapPolygonMode.onMouseMove = function (state, e) {
+  console.log('Mouse move event:', e.lngLat);
   const { lng, lat } = snap(state, e);
+  console.log('Snapped coordinates:', { lng, lat });
 
   state.snappedLng = lng;
   state.snappedLat = lat;
