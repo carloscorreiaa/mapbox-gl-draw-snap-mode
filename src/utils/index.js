@@ -22,22 +22,8 @@ export const IDS = {
   HORIZONTAL_GUIDE: 'HORIZONTAL_GUIDE',
 };
 
-export const addPointTovertices = (
-  map,
-  vertices,
-  coordinates,
-  forceInclusion
-) => {
-  const { width: w, height: h } = map?.getCanvas();
-  // Just add verteices of features currently visible in viewport
-  const { x, y } = map?.project(coordinates);
-  const pointIsOnTheScreen = x > 0 && x < w && y > 0 && y < h;
-
-  // But do add off-screen points if forced (e.g. for the current feature)
-  // So features will always snap to their own points
-  if (pointIsOnTheScreen || forceInclusion) {
-    vertices.push(coordinates);
-  }
+export const addPointToVertices = (map, vertices, coordinates) => {
+  vertices.push(coordinates);
 };
 
 export const createSnapList = (map, draw, currentFeature) => {
@@ -72,7 +58,7 @@ export const createSnapList = (map, draw, currentFeature) => {
     } else {
       // If not an array of arrays, only consider arrays with two items
       if (coordinates.length === 2) {
-        addPointTovertices(map, vertices, coordinates, isCurrentFeature);
+        addPointToVertices(map, vertices, coordinates);
       }
     }
   };
@@ -109,12 +95,15 @@ export const createSnapList = (map, draw, currentFeature) => {
 
     snapList.push(feature);
   });
+  console.log(snapList);
+  
   return [snapList, vertices];
 };
 
 const getNearbyvertices = (vertices, coords) => {
   const verticals = [];
   const horizontals = [];
+;
 
   vertices.forEach((vertex) => {
     verticals.push(vertex[0]);
@@ -216,11 +205,21 @@ const calcLayerDistances = (lngLat, layer) => {
   const [lng, lat] = nearestPoint.geometry.coordinates;
 
   let segmentIndex = nearestPoint.properties.index;
-  if (segmentIndex + 1 === lines.geometry.coordinates.length) segmentIndex--;
+  let { coordinates } = lines.geometry;
+
+  // Handle MultiLineString properly
+  if (lines.geometry.type === "MultiLineString") {
+    coordinates = lines.geometry.coordinates[nearestPoint.properties.multiFeatureIndex];
+  }
+
+  // Ensure we don't go out of bounds with segment index
+  if (segmentIndex + 1 >= coordinates.length) {
+    segmentIndex = coordinates.length - 2;
+  }
 
   return {
     latlng: { lng, lat },
-    segment: lines.geometry.coordinates.slice(segmentIndex, segmentIndex + 2),
+    segment: coordinates.slice(segmentIndex, segmentIndex + 2),
     distance: nearestPoint.properties.dist,
     isMarker,
   };
@@ -364,6 +363,7 @@ const checkPrioritiySnapping = (
 export const snap = (state, e) => {
   let lng = e.lngLat.lng;
   let lat = e.lngLat.lat;
+  
 
   // Holding alt bypasses all snapping
   if (e.originalEvent.altKey) {
@@ -384,7 +384,7 @@ export const snap = (state, e) => {
 
     // if no layers found. Can happen when circle is the only visible layer on the map and the hidden snapping-border circle layer is also on the map
     if (Object.keys(closestLayer).length === 0) {
-      return false;
+      return { lng, lat }; // Return original coordinates instead of false
     }
 
     const isMarker = closestLayer.isMarker;
@@ -404,7 +404,7 @@ export const snap = (state, e) => {
     }
 
     minDistance =
-      ((state.options.snapOptions && state.options.snapOptions.snapPx) || 15) *
+      ((state.options.snapOptions && state.options.snapOptions.snapPx) || 30) * // Increased from 15 to 30
       metersPerPixel(snapLatLng.lat, state.map.getZoom());
   }
 
