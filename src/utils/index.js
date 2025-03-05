@@ -121,6 +121,9 @@ export const createSnapList = (map, draw, currentFeature, getFeatures) => {
   return [snapList, vertices];
 };
 
+console.log(snapList);
+
+
 const getNearbyVertices = (vertices, coords) => {
   const verticals = [];
   const horizontals = [];
