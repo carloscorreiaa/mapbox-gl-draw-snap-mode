@@ -57,8 +57,8 @@ export const createSnapList = (map, draw, currentFeature) => {
     snapList.push(feature);
   });
 
-  console.log('Snap list length:', snapList.length);
-  console.log('Vertices length:', vertices.length);
+  console.log('Snap list length:', snapList);
+  console.log('Vertices length:', vertices);
   
   return [snapList, vertices];
 };
